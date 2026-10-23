@@ -1,0 +1,94 @@
+name: iOS Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify v1.2.3 build 3 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s SnowKingIOS/GameAssets/GameAssets.snow
+          grep -F 'final class GameAssetStore' SnowKingIOS/GameAssetStore.swift
+          grep -F 'GameAssetStore.swift in Sources' SnowKingIOS.xcodeproj/project.pbxproj
+          grep -F 'final class WeChatLoginService' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'GameCrypto.decMsg' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'login/serverlist?_seq=3' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'WeChatScannerViewController' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'response fields=' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'showFailure' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'if errorCode == 402' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'bundledResource' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'fragmentsAllowed' SnowKingIOS/WeChatLoginService.swift
+          grep -F 'WeChatRolePickerViewController' SnowKingIOS/WeChatLoginService.swift
+          grep -F '导入选中' SnowKingIOS/WeChatLoginService.swift
+          grep -F '<key>CFBundleShortVersionString</key><string>1.2.3</string>' SnowKingIOS/Info.plist
+          grep -F '<key>CFBundleVersion</key><string>3</string>' SnowKingIOS/Info.plist
+
+      - name: Build unsigned archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -sdk iphoneos \
+            -project SnowKingIOS.xcodeproj \
+            -scheme SnowKingIOS \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/SnowKingIOS.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+          test -d "$RUNNER_TEMP/SnowKingIOS.xcarchive/Products/Applications/SnowKingIOS.app"
+          app_path="$RUNNER_TEMP/SnowKingIOS.xcarchive/Products/Applications/SnowKingIOS.app"
+          test -s "$app_path/GameAssets/GameAssets.snow"
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/Payload"
+          app_path="$RUNNER_TEMP/SnowKingIOS.xcarchive/Products/Applications/SnowKingIOS.app"
+          cp -R "$app_path" "$RUNNER_TEMP/Payload/SnowKingIOS.app"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$RUNNER_TEMP/Payload/SnowKingIOS.app/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$RUNNER_TEMP/Payload/SnowKingIOS.app/Info.plist"
+          cd "$RUNNER_TEMP"
+          test -f Payload/SnowKingIOS.app/Info.plist
+          zip -qry SnowKingIOS-v1.2.3-build3-unsigned.ipa Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowKingIOS-v1.2.3-build3-unsigned-ipa
+          path: ${{ runner.temp }}/SnowKingIOS-v1.2.3-build3-unsigned.ipa
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowKingIOS-archive
+          path: ${{ runner.temp }}/SnowKingIOS.xcarchive
+
+      - name: Publish IPA to artifacts branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan artifacts
+          git rm -rf .
+          mkdir -p dist
+          cp "$RUNNER_TEMP/SnowKingIOS-v1.2.3-build3-unsigned.ipa" dist/
+          git add -f dist
+          git commit -m "Unsigned IPA v1.2.3 build 3 (run $GITHUB_RUN_NUMBER)"
+          git push --force origin artifacts
+

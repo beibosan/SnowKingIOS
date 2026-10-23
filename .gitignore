@@ -1,0 +1,11 @@
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.mobileprovision
+*.p12
+*.cer
+*.ipa
+_codex_backups/
+TANCHUANG/
+*.bak
