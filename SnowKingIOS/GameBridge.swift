@@ -520,7 +520,7 @@ final class GameBridge: NSObject, WKScriptMessageHandler {
                 kind: args["kind"] as? String ?? "saveFile",
                 fileName: args["fileName"] as? String ?? "",
                 mimeType: args["mimeType"] as? String ?? "application/octet-stream",
-                payload: args["data"] as? String ?? ""
+                payloadChunks: [args["data"] as? String ?? ""]
             )
         case "beginSave":
             beginSave(args)
@@ -612,22 +612,6 @@ final class GameBridge: NSObject, WKScriptMessageHandler {
                     if kind == "saveImage" || kind == "saveDataUrl" {
                         self?.saveImageToPhotoLibrary(result)
                     }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self?.recordSaveResult(level: "error", detail: error.localizedDescription)
-                }
-            }
-        }
-    }
-
-    private func scheduleSave(kind: String, fileName: String, mimeType: String, payloadChunks: [String]) {
-        saveQueue.async { [weak self] in
-            do {
-                let payload = payloadChunks.joined()
-                let result = try Self.persist(kind: kind, fileName: fileName, mimeType: mimeType, payload: payload)
-                DispatchQueue.main.async {
-                    self?.recordSaveResult(level: "info", detail: result.path)
                 }
             } catch {
                 DispatchQueue.main.async {

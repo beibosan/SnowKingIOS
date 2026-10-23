@@ -20,6 +20,7 @@ final class MultiViewController: UIViewController {
     private var syncDisabledIDs = Set<UUID>()
     private var lastRenderedSize = CGSize.zero
     private var nextWebLoadOrder = 0
+    private var resizeWorkItem: DispatchWorkItem?
 
     init(vertical: Bool, accounts: [SnowAccount]) {
         self.vertical = vertical

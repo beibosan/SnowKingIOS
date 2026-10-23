@@ -486,3 +486,13 @@ extension Notification.Name {
 extension Notification.Name {
     static let snowKingGameCacheCleared = Notification.Name("snowking.game-cache-cleared")
 }
+
+enum SnowLogger {
+    static func debug(_ tag: String, _ message: String) { write("DEBUG", tag, message) }
+    static func info(_ tag: String, _ message: String) { write("INFO", tag, message) }
+    static func error(_ tag: String, _ message: String) { write("ERROR", tag, message) }
+
+    private static func write(_ level: String, _ tag: String, _ message: String) {
+        print("[SnowKing][\(level)][\(tag)] \(message)")
+    }
+}
