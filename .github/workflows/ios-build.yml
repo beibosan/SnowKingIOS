@@ -48,7 +48,7 @@ jobs:
             -configuration Release \
             -archivePath "$RUNNER_TEMP/SnowKingIOS.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO 2>&1 | tee "$RUNNER_TEMP/build.log"
           test -d "$RUNNER_TEMP/SnowKingIOS.xcarchive/Products/Applications/SnowKingIOS.app"
           app_path="$RUNNER_TEMP/SnowKingIOS.xcarchive/Products/Applications/SnowKingIOS.app"
           test -s "$app_path/GameAssets/GameAssets.snow"
@@ -78,17 +78,24 @@ jobs:
           name: SnowKingIOS-archive
           path: ${{ runner.temp }}/SnowKingIOS.xcarchive
 
-      - name: Publish IPA to artifacts branch
+      - name: Publish IPA and build log to artifacts branch
+        if: always()
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan artifacts
-          git rm -rf .
+          git rm -rf . || true
           mkdir -p dist
-          cp "$RUNNER_TEMP/SnowKingIOS-v1.2.3-build3-unsigned.ipa" dist/
+          if [ -f "$RUNNER_TEMP/SnowKingIOS-v1.2.3-build3-unsigned.ipa" ]; then
+            cp "$RUNNER_TEMP/SnowKingIOS-v1.2.3-build3-unsigned.ipa" dist/
+          fi
+          if [ -f "$RUNNER_TEMP/build.log" ]; then
+            cp "$RUNNER_TEMP/build.log" dist/build.log
+          fi
           git add -f dist
-          git commit -m "Unsigned IPA v1.2.3 build 3 (run $GITHUB_RUN_NUMBER)"
+          git commit -m "Artifacts v1.2.3 build 3 (run $GITHUB_RUN_NUMBER)"
           git push --force origin artifacts
+
 
